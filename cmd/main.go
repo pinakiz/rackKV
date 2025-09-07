@@ -10,11 +10,12 @@ import (
 
 func main(){
 	handler := &pkg.RackHandle{
-		Mode: pkg.Mode{IsUp: true},
+		Mode: pkg.Mode{IsUp: false},
 	}
 
 	handler.Mode.IsUp = false
 	defer handler.Close()
+	defer handler.ActiveFile.Close();
 	http.HandleFunc("/open" , func(w http.ResponseWriter , r *http.Request){
 		fmt.Println("hehe: ",handler)
 		rw := r.URL.Query().Get("rw")
@@ -37,9 +38,7 @@ func main(){
 	http.HandleFunc("/put",func(w http.ResponseWriter , r *http.Request){
 		// key := r.URL.Query().Get("key");
 		// value := r.URL.Query().Get("Value");
-		fmt.Println(handler.Mode.IsUp)
-		fmt.Println(handler.Mode.ReadWrite)
-
+		fmt.Print("in put: ",handler)
 		if(!handler.Mode.IsUp || !handler.Mode.ReadWrite ){
 			w.Write([]byte("permission denied: Db is in read-only mode"))
 			return
