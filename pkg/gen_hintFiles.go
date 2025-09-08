@@ -92,10 +92,9 @@ func ReadLogs(path string) error {
 	return nil
 }
 
-func Generate_hintFiles(handler *RackHandle) error {
+func Generate_hintFiles() error {
 	dataDir := "./data"
 	hintDir := "./hint"
-	activeFile := handler.ActiveFileId;
 
 	dataFiles, err := os.ReadDir(dataDir)
 	if err != nil {
@@ -118,9 +117,6 @@ func Generate_hintFiles(handler *RackHandle) error {
 
 	for _, file := range hintFiles {
 		fileID, err :=  File_name_to_Id(file.Name())
-		if(fileID==activeFile){
-			continue;
-		}
 		if err != nil {
 			return fmt.Errorf("error parsing hint filename: %w", err)
 		}
