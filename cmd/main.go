@@ -36,20 +36,31 @@ func main(){
 	})	
 	
 	http.HandleFunc("/put",func(w http.ResponseWriter , r *http.Request){
-		// key := r.URL.Query().Get("key");
-		// value := r.URL.Query().Get("Value");
+		key := r.URL.Query().Get("key")
+		value := r.URL.Query().Get("value")
+
 		fmt.Print("in put: ",handler)
 		if(!handler.Mode.IsUp || !handler.Mode.ReadWrite ){
 			w.Write([]byte("permission denied: Db is in read-only mode"))
 			return
 		}
-		pkg.PUT(handler,"hi","bye")
-		w.Write([]byte("OK"));
+		_ , err := pkg.PUT(handler,key,value)
+		if(err != nil){
+			fmt.Println("Error: ",err);
+		}else{
+			w.Write([]byte("OK"));
+		}
+
 	})
 
 	http.HandleFunc("/get" , func(w http.ResponseWriter , r *http.Request){
-		// key := r.URL.Query().Get("key");
-		w.Write([]byte("OK"));
+		key := r.URL.Query().Get("key");
+		val , err := pkg.GET(handler,key);
+		if(err != nil) {
+			fmt.Println("Error: %v",err);
+		}else{
+			w.Write([]byte(val));
+		}
 	})
 
 	http.ListenAndServe(":8080" , nil);

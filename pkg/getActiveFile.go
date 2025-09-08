@@ -5,14 +5,12 @@ import (
 	"os"
 )
 
-
-
 func GetActiveFile(dir string)(int64 , error){
 	files,err := os.ReadDir(dir);
 	if(err!=nil){
 		return 0,fmt.Errorf("error while getting active file: %w",err);
 	}
-	
+
 	var maxName int64;
 
 	for _,entries := range files{

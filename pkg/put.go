@@ -9,39 +9,75 @@ import (
 	"time"
 )
 
-// need more work
-// activefile is not correct
+func computeCRC(timestamp int64, key []byte, val []byte) (uint32, error) {
+    buf := new(bytes.Buffer)
+
+    // Add timestamp
+    if err := binary.Write(buf, binary.LittleEndian, timestamp); err != nil {
+        return 0, err
+    }
+
+    // Add key length
+    if err := binary.Write(buf, binary.LittleEndian, int32(len(key))); err != nil {
+        return 0, err
+    }
+
+    // Add value length
+    if err := binary.Write(buf, binary.LittleEndian, int32(len(val))); err != nil {
+        return 0, err
+    }
+
+    // Add key bytes
+    if _, err := buf.Write(key); err != nil {
+        return 0, err
+    }
+
+    // Add value bytes
+    if _, err := buf.Write(val); err != nil {
+        return 0, err
+    }
+
+    // Compute CRC
+    crc := crc32.ChecksumIEEE(buf.Bytes())
+    return crc, nil
+}
+
 func PUT(handler *RackHandle , key string , val string)(string,error){
 	activeFile := (handler.ActiveFileId)
 	activeFileFD := handler.ActiveFile
 	if activeFileFD == nil {
-    return "", fmt.Errorf("active file is nil")
-}
-
+		return "", fmt.Errorf("active file is nil")
+	}
 	fmt.Println("active file : ",activeFile)
-
-	crc := crc32.ChecksumIEEE([]byte(key + val))
+	tmstmp := time.Now().Unix();
+	crc , err:= computeCRC(tmstmp,[]byte(key),[]byte(val));
+	if(err != nil){
+		return "",fmt.Errorf("error while computing checksum: %w",err);
+	}
 	buf := new(bytes.Buffer)
 
     if err := binary.Write(buf, binary.LittleEndian, crc); err != nil { return "", err }
-    if err := binary.Write(buf, binary.LittleEndian, time.Now().Unix()); err != nil { return "", err }
+    if err := binary.Write(buf, binary.LittleEndian, tmstmp); err != nil { return "", err }
     if err := binary.Write(buf, binary.LittleEndian, int32(len(key))); err != nil { return "", err }
     if err := binary.Write(buf, binary.LittleEndian, int32(len(val))); err != nil { return "", err }
 	buf.Write([]byte(key))
 	buf.Write([]byte(val))
 
-	headerSz := 4 + 8 + 4 + 4 // crc + timestamp + keySz + valueSz
-	pos, _ := activeFileFD.Seek(0,io.SeekEnd);
-	pos += int64(headerSz) + int64(len(key));
+	handler.mu.Lock()
+	defer handler.mu.Unlock()
 
+	headerSz := 4 + 8 + 4 + 4 // crc + timestamp + keySz + valueSz
+    fileOffset, _ := activeFileFD.Seek(0, io.SeekEnd)
+    valuePos := fileOffset + int64(headerSz) + int64(len(key))
+	fmt.Println("active file:",handler.ActiveFileId)
 	entry := KeyDirEntry{
 		FileId: int64(activeFile),
 		ValueSz: int64(len(val)),
-		ValuePos: pos,
-		Tstamp: time.Now().Unix(),
+		ValuePos: valuePos,
+		Tstamp: tmstmp,
 	}
 	handler.KeyDir[key] = entry;
-	_, err := activeFileFD.Write(buf.Bytes())
+	_, err = activeFileFD.Write(buf.Bytes())
 	activeFileFD.Sync() // flush to disk
 
 	if(err!=nil){

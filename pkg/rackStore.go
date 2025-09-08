@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"syscall"
 )
 
@@ -27,6 +28,7 @@ type RackHandle struct{
 	ActiveFile *os.File;
 	Mode Mode
 	KeyDir map[string]KeyDirEntry
+	mu sync.Mutex
 	
 }
 
@@ -46,13 +48,14 @@ func Open(directory string , mode Mode)(*RackHandle , error){
 
 	handler.KeyDir = make(map[string]KeyDirEntry)
 
-	activeFileId , err := GetActiveFile("../data");
+	activeFileId , err := GetActiveFile("./data");
 	if(err != nil){
 		return handler, fmt.Errorf("failed to get a active file: %w", err);
-	}	
+	}
 	name_activeFile := Id_to_file_name(activeFileId);
+	handler.ActiveFileId = activeFileId;
 
-	activeFile , err := os.OpenFile("../data/"+name_activeFile , os.O_CREATE|os.O_RDWR , 0666);
+	activeFile , err := os.OpenFile("./data/"+name_activeFile , os.O_CREATE|os.O_RDWR , 0666);
 	if(err != nil){	
 		return handler, fmt.Errorf("failed to get a active data file: %w", err);
 	}
