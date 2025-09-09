@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	rackkv "rackKV"
 	"sort"
 	"strings"
 	"time"
@@ -205,7 +206,11 @@ func Merger(in_mem_map map[string]KeyDirEntry, handler *RackHandle) error {
 	return nil
 }
 func MergerListener(ctx context.Context, in_mem_map map[string]KeyDirEntry, handler *RackHandle) {
-	ticker := time.NewTicker(2 * time.Minute)
+	cfg,err := rackkv.LoadConfig();
+	if(err != nil){
+		 fmt.Println("error while loading merging: %w",err);
+	}
+	ticker := time.NewTicker(time.Duration(cfg.MergeInterval)* time.Minute)
 	defer ticker.Stop()
 
 	for {

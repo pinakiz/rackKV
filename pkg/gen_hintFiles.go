@@ -109,6 +109,9 @@ func ReadLogs(path string) error {
 		// if _, err := writeFile.Write(hintFileEntry); err != nil {
 		// 	return fmt.Errorf("error writing hint entry: %w", err)
 		// }
+		if(valsz==0){
+			delete(record,key);
+		}
 	}
 	for _, v := range record {
 		binary.Write(writeFile, binary.LittleEndian, v.tstamp)

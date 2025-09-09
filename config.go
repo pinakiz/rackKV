@@ -13,6 +13,8 @@ type Config struct {
 	HintDir       string
 	MergeInterval int
 	MaxFileSizeMB int
+	SyncEveryN 	int
+	SyncInterval	int
 }
 
 func LoadConfig() (*Config, error) {
@@ -50,6 +52,28 @@ func LoadConfig() (*Config, error) {
 			return nil, fmt.Errorf("invalid MAX_FILE_SIZE_MB: %w", err)
 		}
 		cfg.MaxFileSizeMB = val
+	}
+
+	syncEveryN := os.Getenv("SYNC_EVERY_N_STEPS")
+	if syncEveryN != "" {
+		val, err := strconv.Atoi(syncEveryN)
+		if err != nil {
+			return nil, fmt.Errorf("invalid SYNC_EVERY_N_STEPS: %w", err)
+		}
+		cfg.SyncEveryN = val
+	}else{
+		cfg.SyncEveryN = 100
+	}
+
+	syncInterval := os.Getenv("SYNC_INTERVAL")
+	if syncInterval != "" {
+		val, err := strconv.Atoi(syncInterval)
+		if err != nil {
+			return nil, fmt.Errorf("invalid SYNC_INTERVAL: %w", err)
+		}
+		cfg.SyncInterval = val
+	}else {
+		cfg.SyncInterval = 10; 
 	}
 
 	return cfg, nil

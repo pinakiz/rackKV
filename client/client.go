@@ -2,44 +2,41 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"fmt"
-	"net"
+	"io"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 )
 
-// Helper: create HTTP client for Unix socket
-func newUnixClient(socketPath string) *http.Client {
+// Helper: create HTTP client for TCP
+func newHTTPClient() *http.Client {
 	return &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", socketPath)
-			},
-		},
 		Timeout: 5 * time.Second,
 	}
 }
 
 // Send request to the server
-func sendRequest(client *http.Client, path string) (string, error) {
-	resp, err := client.Get("http://unix" + path)
+func sendRequest(client *http.Client, baseURL, path string) (string, error) {
+	resp, err := client.Get(baseURL + path)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
-	buf := make([]byte, 1024)
-	n, _ := resp.Body.Read(buf)
-	return string(buf[:n]), nil
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
 }
 
 func main() {
-	socketPath := "/tmp/rackkv.sock"
-	client := newUnixClient(socketPath)
+	baseURL := "http://localhost:8080" // server address
+	client := newHTTPClient()
 
-	fmt.Println("Welcome to rackKV CLI")
+	fmt.Println("Welcome to rackKV CLI (HTTP)")
 	fmt.Println("Type 'help' for commands")
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -92,7 +89,7 @@ func main() {
 					sync = "true"
 				}
 			}
-			res, err := sendRequest(client, fmt.Sprintf("/open?rw=%s&syn=%s", rw, sync))
+			res, err := sendRequest(client, baseURL, fmt.Sprintf("/open?rw=%s&syn=%s", rw, sync))
 			if err != nil {
 				fmt.Println("Error:", err)
 			} else {
@@ -106,7 +103,7 @@ func main() {
 			}
 			key := parts[1]
 			val := strings.Join(parts[2:], " ")
-			res, err := sendRequest(client, fmt.Sprintf("/put?key=%s&value=%s", key, val))
+			res, err := sendRequest(client, baseURL, fmt.Sprintf("/put?key=%s&value=%s", key, val))
 			if err != nil {
 				fmt.Println("Error:", err)
 			} else {
@@ -119,7 +116,7 @@ func main() {
 				continue
 			}
 			key := parts[1]
-			res, err := sendRequest(client, fmt.Sprintf("/get?key=%s", key))
+			res, err := sendRequest(client, baseURL, fmt.Sprintf("/get?key=%s", key))
 			if err != nil {
 				fmt.Println("Error:", err)
 			} else {
@@ -132,7 +129,7 @@ func main() {
 				continue
 			}
 			key := parts[1]
-			res, err := sendRequest(client, fmt.Sprintf("/delete?key=%s", key))
+			res, err := sendRequest(client, baseURL, fmt.Sprintf("/delete?key=%s", key))
 			if err != nil {
 				fmt.Println("Error:", err)
 			} else {

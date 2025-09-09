@@ -7,6 +7,7 @@ import (
 	"hash/crc32"
 	"io"
 	"os"
+	rackkv "rackKV"
 	"time"
 )
 
@@ -51,10 +52,18 @@ func PUT(handler *RackHandle, key string, val string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error getting stats of active file: %w", err)
 	}
+	cfg,err := rackkv.LoadConfig();
+	if(err != nil){
+		return "",fmt.Errorf("error loading configs: %w",err);
+	}
+
 	handler.mu.Lock()
 	defer handler.mu.Unlock()
 
-	if fileInfo.Size() > 10485760 {
+	// Assuming MaxFileSizeMB is a field in the Config struct and represents megabytes,
+	// convert it to bytes for comparison.
+	maxFileSizeBytes := int64(cfg.MaxFileSizeMB) * 1024 * 1024
+	if fileInfo.Size() > maxFileSizeBytes {
 		newId, err := GetActiveFile("./data")
 		if err != nil {
 			return "", fmt.Errorf("error getting new active id: %w", err)
@@ -76,7 +85,7 @@ func PUT(handler *RackHandle, key string, val string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error while computing checksum: %w", err)
 	}
-	buf := new(bytes.Buffer)
+	buf := new(bytes.Buffer)	
 
 	if err := binary.Write(buf, binary.LittleEndian, crc); err != nil {
 		return "", err
@@ -93,6 +102,11 @@ func PUT(handler *RackHandle, key string, val string) (string, error) {
 	buf.Write([]byte(key))
 	buf.Write([]byte(val))
 
+	if(len(val)==0){
+		delete(handler.KeyDir,key);
+	}
+	
+
 	headerSz := 4 + 8 + 4 + 4 // crc + timestamp + keySz + valueSz
 	fileOffset, _ := activeFileFD.Seek(0, io.SeekEnd)
 	valuePos := fileOffset + int64(headerSz) + int64(len(key))
@@ -106,7 +120,14 @@ func PUT(handler *RackHandle, key string, val string) (string, error) {
 	handler.KeyDir[key] = entry
 	_, err = activeFileFD.Write(buf.Bytes())
 	handler.WriteCount++
-	if handler.WriteCount%100 == 0 || time.Since(handler.LastSync) > 100*time.Millisecond {
+	step_count := 1;
+	if(handler.Mode.SyncOnWrite){
+		step_count = 1;
+	}else{
+		step_count = cfg.SyncEveryN
+	}
+	duration := cfg.SyncInterval;
+	if handler.WriteCount%(step_count) == 0 || time.Since(handler.LastSync) > time.Duration(duration)*time.Microsecond {
 		if err := handler.ActiveFile.Sync(); err != nil {
 			return "", fmt.Errorf("sync error: %w", err)
 		}
