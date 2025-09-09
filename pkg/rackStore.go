@@ -32,7 +32,6 @@ type RackHandle struct{
 	mu sync.Mutex
 	LastSync time.Time
 	WriteCount int
-	
 }
 
 func Open(directory string , mode Mode , handler *RackHandle)( error){
@@ -82,7 +81,6 @@ func Open(directory string , mode Mode , handler *RackHandle)( error){
 			return fmt.Errorf("error while aquaring the lock: %w",err);
 		}
 	}
-
 
 	handler.Mode.IsUp = true;
 	return nil;

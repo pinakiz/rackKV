@@ -72,9 +72,6 @@ func ReadLogs(path string) error {
 		checkBuf := append(header[4:20], keyBuf...)
 		checkBuf = append(checkBuf, valBuf...)
 		if crc32.ChecksumIEEE(checkBuf) != crc {
-			fmt.Printf("stored=%x computed=%x header=%x key=%x val=%x\n",
-				crc, crc32.ChecksumIEEE(checkBuf), header, keyBuf, valBuf)
-
 			return fmt.Errorf("CRC mismatch for key: %s", string(keyBuf))
 		}
 

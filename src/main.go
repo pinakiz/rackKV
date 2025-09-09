@@ -1,12 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"rackKV/pkg"
 	"strconv"
-
-	_ "net/http/pprof"
 )
 
 
@@ -30,6 +30,12 @@ func main(){
 	clearScreen()
 	fmt.Println("Done");
 	clearScreen()
+	in_mem_map := handler.KeyDir;
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go pkg.MergerListener(ctx, in_mem_map, handler)
+
+
 	defer handler.Close()
 	defer handler.ActiveFile.Close();
 	http.HandleFunc("/open" , func(w http.ResponseWriter , r *http.Request){
