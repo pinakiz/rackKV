@@ -30,6 +30,19 @@ func main(){
 	clearScreen()
 	fmt.Println("Done");
 	clearScreen()
+		banner := ` ________  ________  ________  ___  __    ___  __    ___      ___ 
+|\   __  \|\   __  \|\   ____\|\  \|\  \ |\  \|\  \ |\  \    /  /|
+\ \  \|\  \ \  \|\  \ \  \___|\ \  \/  /|\ \  \/  /|\ \  \  /  / /
+ \ \   _  _\ \   __  \ \  \    \ \   ___  \ \   ___  \ \  \/  / / 
+  \ \  \\  \\ \  \ \  \ \  \____\ \  \\ \  \ \  \\ \  \ \    / /  
+   \ \__\\ _\\ \__\ \__\ \_______\ \__\\ \__\ \__\\ \__\ \__/ /   
+    \|__|\|__|\|__|\|__|\|_______|\|__| \|__|\|__| \|__|\|__|/    
+                                                                  
+                                                                  
+                                                                  `
+	fmt.Println(banner)
+	fmt.Println("SERVER LISTENING")
+
 	in_mem_map := handler.KeyDir;
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

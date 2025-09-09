@@ -60,8 +60,6 @@ func PUT(handler *RackHandle, key string, val string) (string, error) {
 	handler.mu.Lock()
 	defer handler.mu.Unlock()
 
-	// Assuming MaxFileSizeMB is a field in the Config struct and represents megabytes,
-	// convert it to bytes for comparison.
 	maxFileSizeBytes := int64(cfg.MaxFileSizeMB) * 1024 * 1024
 	if fileInfo.Size() > maxFileSizeBytes {
 		newId, err := GetActiveFile("./data")
