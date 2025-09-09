@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
+	"os"
 	"time"
 )
 
@@ -45,10 +46,31 @@ func computeCRC(timestamp int64, key []byte, val []byte) (uint32, error) {
 func PUT(handler *RackHandle , key string , val string)(string,error){
 	activeFile := (handler.ActiveFileId)
 	activeFileFD := handler.ActiveFile
+	fileInfo, err := activeFileFD.Stat();
+	
+	if(err != nil){
+		return "", fmt.Errorf("error getting stats of active file: %w",err);
+	}
+	handler.mu.Lock()
+	defer handler.mu.Unlock()
+
+	if(fileInfo.Size()>10485760){
+		newId,err  := GetActiveFile("./data");
+		if(err!=nil){
+			return "",fmt.Errorf("error getting new active id: %w",err);
+		}
+		newFile, err := os.OpenFile("./data/" +(Id_to_file_name(newId)),os.O_CREATE|os.O_RDWR,0666);
+		if err != nil{
+			return "", fmt.Errorf("error accessing new active file: %w",err);
+		}
+		handler.ActiveFileId = newId;
+		handler.ActiveFile = newFile
+	}
+
 	if activeFileFD == nil {
 		return "", fmt.Errorf("active file is nil")
 	}
-	fmt.Println("active file : ",activeFile)
+	// fmt.Println("active file : ",activeFile)
 	tmstmp := time.Now().Unix();
 	crc , err:= computeCRC(tmstmp,[]byte(key),[]byte(val));
 	if(err != nil){
@@ -63,13 +85,10 @@ func PUT(handler *RackHandle , key string , val string)(string,error){
 	buf.Write([]byte(key))
 	buf.Write([]byte(val))
 
-	handler.mu.Lock()
-	defer handler.mu.Unlock()
-
 	headerSz := 4 + 8 + 4 + 4 // crc + timestamp + keySz + valueSz
     fileOffset, _ := activeFileFD.Seek(0, io.SeekEnd)
     valuePos := fileOffset + int64(headerSz) + int64(len(key))
-	fmt.Println("active file:",handler.ActiveFileId)
+	// fmt.Println("active file:",handler.ActiveFileId)
 	entry := KeyDirEntry{
 		FileId: int64(activeFile),
 		ValueSz: int64(len(val)),
@@ -78,7 +97,14 @@ func PUT(handler *RackHandle , key string , val string)(string,error){
 	}
 	handler.KeyDir[key] = entry;
 	_, err = activeFileFD.Write(buf.Bytes())
-	activeFileFD.Sync() // flush to disk
+	handler.WriteCount++
+	if handler.WriteCount%100 == 0 || time.Since(handler.LastSync) > 100*time.Millisecond {
+		if err := handler.ActiveFile.Sync(); err != nil {
+			return "", fmt.Errorf("sync error: %w", err)
+		}
+		handler.LastSync = time.Now()
+		handler.WriteCount = 0
+	}
 
 	if(err!=nil){
 		return "" ,fmt.Errorf("can't put the entry");

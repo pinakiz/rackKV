@@ -5,19 +5,35 @@ import (
 	"net/http"
 	"rackKV/pkg"
 	"strconv"
+
+	_ "net/http/pprof"
 )
+
+
+func clearScreen() {
+	fmt.Print("\033[H\033[2J") // Moves cursor home and clears the screen
+}
+
 
 
 func main(){
 	handler := &pkg.RackHandle{
-		Mode: pkg.Mode{IsUp: false},
 	}
-
-	handler.Mode.IsUp = false
+	fmt.Println("Generating Hint Files")
+	if err := pkg.Generate_hintFiles(); err != nil{
+		 fmt.Println(err);
+	}
+	fmt.Println("Generating KeyDir");
+	if err := pkg.GenerateKeyDir(handler); err != nil{
+		 fmt.Println(err);
+	}
+	clearScreen()
+	fmt.Println("Done");
+	clearScreen()
 	defer handler.Close()
 	defer handler.ActiveFile.Close();
 	http.HandleFunc("/open" , func(w http.ResponseWriter , r *http.Request){
-		fmt.Println("hehe: ",handler)
+		fmt.Println("Opened: ",handler)
 		rw := r.URL.Query().Get("rw")
 		readwrite , _ := strconv.ParseBool(rw);
 		syn := r.URL.Query().Get("syn")
@@ -26,20 +42,19 @@ func main(){
 			w.Write([]byte("Db is already opened"))
 			return
 		}
-		temp , err := pkg.Open(".", pkg.Mode{ReadWrite : readwrite ,SyncOnWrite : sync})
-		handler = temp;
-		if(err != nil){
+		if err := pkg.Open(".", pkg.Mode{ReadWrite : readwrite ,SyncOnWrite : sync}, handler);(err != nil){
 			w.Write([]byte(err.Error()))
 		}else{
 			w.Write([]byte("OK"));
 		}
 	})	
+
 	
 	http.HandleFunc("/put",func(w http.ResponseWriter , r *http.Request){
 		key := r.URL.Query().Get("key")
 		value := r.URL.Query().Get("value")
 
-		fmt.Print("in put: ",handler)
+		// fmt.Print("in put: ",handler)
 		if(!handler.Mode.IsUp || !handler.Mode.ReadWrite ){
 			w.Write([]byte("permission denied: Db is in read-only mode"))
 			return
@@ -56,8 +71,13 @@ func main(){
 	http.HandleFunc("/get" , func(w http.ResponseWriter , r *http.Request){
 		key := r.URL.Query().Get("key");
 		val , err := pkg.GET(handler,key);
+		if(!handler.Mode.IsUp){
+			fmt.Println("Db is not up")
+			w.Write([]byte("Db is not up"))
+			return
+		}
 		if(err != nil) {
-			fmt.Println("Error: %v",err);
+			fmt.Println("Error: ",err);
 		}else{
 			w.Write([]byte(val));
 		}

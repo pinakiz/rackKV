@@ -25,3 +25,13 @@ func File_name_to_Id(name string) (int64, error) {
 	}
 	return id , nil;
 }
+
+func hint_name_to_Id(name string) (int64, error) {
+	base := strings.TrimSuffix(name , ".hint");
+	id , err := strconv.ParseInt(base , 10 , 64);
+	if(err != nil){
+		return 0, fmt.Errorf("error while generating id : %w",err);
+	}
+	return id , nil;
+}
+
