@@ -3,151 +3,102 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"rackKV/pkg"
 	"strconv"
 )
-
 
 func clearScreen() {
 	fmt.Print("\033[H\033[2J") // Moves cursor home and clears the screen
 }
 
-
-
-func main(){
-	handler := &pkg.RackHandle{
-	}
+func main() {
+	handler := &pkg.RackHandle{}
 	fmt.Println("Generating Hint Files")
-	if err := pkg.Generate_hintFiles(); err != nil{
-		 fmt.Println(err);
+	if err := pkg.Generate_hintFiles(); err != nil {
+		fmt.Println(err)
 	}
-	fmt.Println("Generating KeyDir");
-	if err := pkg.GenerateKeyDir(handler); err != nil{
-		 fmt.Println(err);
+	fmt.Println("Generating KeyDir")
+	if err := pkg.GenerateKeyDir(handler); err != nil {
+		fmt.Println(err)
 	}
 	clearScreen()
-	fmt.Println("Done");
+	fmt.Println("Done")
 	clearScreen()
-	in_mem_map := handler.KeyDir;
+	in_mem_map := handler.KeyDir
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go pkg.MergerListener(ctx, in_mem_map, handler)
 
-
 	defer handler.Close()
-	defer handler.ActiveFile.Close();
-	http.HandleFunc("/open" , func(w http.ResponseWriter , r *http.Request){
-		fmt.Println("Opened: ",handler)
+	defer handler.ActiveFile.Close()
+	http.HandleFunc("/open", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("Opened: ", handler)
 		rw := r.URL.Query().Get("rw")
-		readwrite , _ := strconv.ParseBool(rw);
+		readwrite, _ := strconv.ParseBool(rw)
 		syn := r.URL.Query().Get("syn")
-		sync, _ := strconv.ParseBool(syn);
-		if(handler.Mode.IsUp){
+		sync, _ := strconv.ParseBool(syn)
+		if handler.Mode.IsUp {
 			w.Write([]byte("Db is already opened"))
 			return
 		}
-		if err := pkg.Open(".", pkg.Mode{ReadWrite : readwrite ,SyncOnWrite : sync}, handler);(err != nil){
+		if err := pkg.Open(".", pkg.Mode{ReadWrite: readwrite, SyncOnWrite: sync}, handler); err != nil {
 			w.Write([]byte(err.Error()))
-		}else{
-			w.Write([]byte("OK"));
+		} else {
+			w.Write([]byte("OK"))
 		}
-	})	
+	})
 
-	
-	http.HandleFunc("/put",func(w http.ResponseWriter , r *http.Request){
+	http.HandleFunc("/put", func(w http.ResponseWriter, r *http.Request) {
 		key := r.URL.Query().Get("key")
 		value := r.URL.Query().Get("value")
 
 		// fmt.Print("in put: ",handler)
-		if(!handler.Mode.IsUp || !handler.Mode.ReadWrite ){
+		if !handler.Mode.IsUp || !handler.Mode.ReadWrite {
 			w.Write([]byte("permission denied: Db is in read-only mode"))
 			return
 		}
-		_ , err := pkg.PUT(handler,key,value)
-		if(err != nil){
-			fmt.Println("Error: ",err);
-		}else{
-			w.Write([]byte("OK"));
+		_, err := pkg.PUT(handler, key, value)
+		if err != nil {
+			fmt.Println("Error: ", err)
+		} else {
+			w.Write([]byte("OK"))
 		}
 
 	})
 
-	http.HandleFunc("/get" , func(w http.ResponseWriter , r *http.Request){
-		key := r.URL.Query().Get("key");
-		val , err := pkg.GET(handler,key);
-		if(!handler.Mode.IsUp){
+	http.HandleFunc("/get", func(w http.ResponseWriter, r *http.Request) {
+		key := r.URL.Query().Get("key")
+		val, err := pkg.GET(handler, key)
+		if !handler.Mode.IsUp {
 			fmt.Println("Db is not up")
 			w.Write([]byte("Db is not up"))
 			return
 		}
-		if(err != nil) {
-			fmt.Println("Error: ",err);
-		}else{
-			w.Write([]byte(val));
+		if err != nil {
+			fmt.Println("Error: ", err)
+		} else {
+			w.Write([]byte(val))
 		}
 	})
 
-	http.ListenAndServe(":8080" , nil);
+	socketPath := "/tmp/rackkv.sock"
+	if _, err := os.Stat(socketPath); err == nil {
+		os.Remove(socketPath)
+	}
+
+	l, err := net.Listen("unix", socketPath)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to listen on unix socket: %v", err))
+	}
+	defer l.Close()
+
+	fmt.Println("Server listening on", socketPath)
+
+	if err := http.Serve(l, nil); err != nil {
+		panic(fmt.Sprintf("Server error: %v", err))
+	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

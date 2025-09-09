@@ -5,22 +5,22 @@ import (
 	"os"
 )
 
-func GetActiveFile(dir string)(int64 , error){
-	files,err := os.ReadDir(dir);
-	if(err!=nil){
-		return 0,fmt.Errorf("error while getting active file: %w",err);
+func GetActiveFile(dir string) (int64, error) {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return 0, fmt.Errorf("error while getting active file: %w", err)
 	}
 
-	var maxName int64;
+	var maxName int64
 
-	for _,entries := range files{
-		fileName , err := File_name_to_Id(entries.Name());
-		if(err!=nil){
-			return 0,fmt.Errorf("error while getting active file: %w",err);
+	for _, entries := range files {
+		fileName, err := File_name_to_Id(entries.Name())
+		if err != nil {
+			return 0, fmt.Errorf("error while getting active file: %w", err)
 		}
-		if(maxName < fileName){
+		if maxName < fileName {
 			maxName = fileName
 		}
 	}
-	return	(maxName+1),nil;
+	return (maxName + 1), nil
 }

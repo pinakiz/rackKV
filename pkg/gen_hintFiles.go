@@ -10,13 +10,14 @@ import (
 	"path/filepath"
 	"sort"
 )
-type unique_record struct{
-	value string
+
+type unique_record struct {
+	value  string
 	tstamp uint64
-	keysz uint32
-	valsz uint32
+	keysz  uint32
+	valsz  uint32
 	valPos int64
-	key string
+	key    string
 }
 
 func ReadLogs(path string) error {
@@ -29,11 +30,11 @@ func ReadLogs(path string) error {
 	}
 	defer readFile.Close()
 	hintDir := "./hint"
-	hintID , err := File_name_to_Id(path);
-	if(err != nil){
-		return fmt.Errorf("error getting fileId from file name: %w",err);
+	hintID, err := File_name_to_Id(path)
+	if err != nil {
+		return fmt.Errorf("error getting fileId from file name: %w", err)
 	}
-	tempHint := filepath.Join(hintDir,fmt.Sprintf("temp-%d.hint",hintID))
+	tempHint := filepath.Join(hintDir, fmt.Sprintf("temp-%d.hint", hintID))
 	writeFile, err := os.OpenFile(tempHint, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
 	if err != nil {
 		return fmt.Errorf("cant open hint file: %w", err)
@@ -79,23 +80,23 @@ func ReadLogs(path string) error {
 		tstamp := binary.LittleEndian.Uint64(header[4:12])
 		offset, _ := readFile.Seek(0, io.SeekCurrent)
 		valPos := offset - int64(len(valBuf))
-		key := string(keyBuf);
+		key := string(keyBuf)
 		entry_record := unique_record{
 			tstamp: tstamp,
-			keysz: keysz,
-			valsz: valsz,
+			keysz:  keysz,
+			valsz:  valsz,
 			valPos: valPos,
-			key : key,
+			key:    key,
 		}
 
-		_ , ok := record[key]
-		if(ok){
-			temp_tstamp := record[key].tstamp;
-			if(tstamp > temp_tstamp){
-				record[key] = entry_record;
+		_, ok := record[key]
+		if ok {
+			temp_tstamp := record[key].tstamp
+			if tstamp > temp_tstamp {
+				record[key] = entry_record
 			}
-		}else{
-			record[key] = entry_record;
+		} else {
+			record[key] = entry_record
 		}
 		// --- Build hint entry ---
 		// hintFileEntry := []byte{}
@@ -109,29 +110,27 @@ func ReadLogs(path string) error {
 		// 	return fmt.Errorf("error writing hint entry: %w", err)
 		// }
 	}
-		for _,v := range record{
-		binary.Write(writeFile,binary.LittleEndian,v.tstamp)
-		binary.Write(writeFile,binary.LittleEndian,v.keysz)
-		binary.Write(writeFile,binary.LittleEndian,v.valsz)
-		binary.Write(writeFile,binary.LittleEndian,v.valPos)
-		writeFile.Write([]byte(v.key));
+	for _, v := range record {
+		binary.Write(writeFile, binary.LittleEndian, v.tstamp)
+		binary.Write(writeFile, binary.LittleEndian, v.keysz)
+		binary.Write(writeFile, binary.LittleEndian, v.valsz)
+		binary.Write(writeFile, binary.LittleEndian, v.valPos)
+		writeFile.Write([]byte(v.key))
 	}
 
 	// --- Rename after processing all entries ---
-	id, err :=  File_name_to_Id(path)
-	if err != nil{
-		return  fmt.Errorf("error reading path name: %w",err)
+	id, err := File_name_to_Id(path)
+	if err != nil {
+		return fmt.Errorf("error reading path name: %w", err)
 	}
 
-	newHintName :=  Id_to_hint_name(id)
+	newHintName := Id_to_hint_name(id)
 	// fmt.Println(newHintName)
 
 	if err := os.Rename(tempHint, filepath.Join(hintDir, newHintName)); err != nil {
 		return fmt.Errorf("error renaming hint file: %w", err)
 	}
 	return nil
-
-
 
 }
 
@@ -148,22 +147,55 @@ func Generate_hintFiles() error {
 		return fmt.Errorf("error reading hint dir: %w", err)
 	}
 	dataFilesMap := make(map[int64]int64)
+	hintFilesMap := make(map[int64]int64)
 
 	for _, file := range dataFiles {
-		fileID, err :=  File_name_to_Id(file.Name())
+		fileID, err := File_name_to_Id(file.Name())
 		if err != nil {
 			return fmt.Errorf("error parsing data filename: %w", err)
 		}
 		dataFilesMap[fileID]++
 	}
-	
 	for _, file := range hintFiles {
-		fileID, err :=  hint_name_to_Id(file.Name())
+		fileID, err := hint_name_to_Id(file.Name())
 		if err != nil {
-			 return fmt.Errorf("error parsing hint filename: %w", err)
+			return fmt.Errorf("error parsing data filename: %w", err)
+		}
+		hintFilesMap[fileID]++
+	}
+	for _, file := range dataFiles {
+		fileID, err := File_name_to_Id(file.Name())
+		if err != nil {
+			return fmt.Errorf("error parsing hint filename: %w", err)
+		}
+		if _, ok := hintFilesMap[fileID]; ok {
+			hintFilesMap[fileID]--
+
+			if hintFilesMap[fileID] == 0 {
+				delete(hintFilesMap, fileID)
+			}
+		}
+	}
+
+	for fileID := range hintFilesMap{
+		fileName := Id_to_hint_name(fileID);
+		filePath := filepath.Join("./hint",fileName);
+		err := os.Remove(filePath);
+		if err != nil{
+			return  fmt.Errorf("error while removing excess hint files: %w",err);
+		}
+	}
+
+	
+
+
+	for _, file := range hintFiles {
+		fileID, err := hint_name_to_Id(file.Name())
+		if err != nil {
+			return fmt.Errorf("error parsing hint filename: %w", err)
 		}
 		if _, ok := dataFilesMap[fileID]; ok {
-			dataFilesMap[fileID]--;
+			dataFilesMap[fileID]--
 
 			if dataFilesMap[fileID] == 0 {
 				delete(dataFilesMap, fileID)
@@ -178,9 +210,9 @@ func Generate_hintFiles() error {
 	sort.Slice(dataFilesList, func(i, j int) bool {
 		return dataFilesList[i] > dataFilesList[j]
 	})
-	
+
 	for _, fileID := range dataFilesList {
-		dataFileName :=  Id_to_file_name(fileID)
+		dataFileName := Id_to_file_name(fileID)
 		if err := ReadLogs(dataFileName); err != nil {
 			return err
 		}
