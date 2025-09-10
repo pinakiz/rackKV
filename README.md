@@ -78,3 +78,12 @@ go run client/client.go
 ```
 ## 📚 Learnings
 RackKV is not just a project, but also a learning journey into database internals — from log-structured storage to compaction strategies, performance benchmarking and much more.
+
+ ________  ________  ________  ___  __    ___  __    ___      ___ 
+|\   __  \|\   __  \|\   ____\|\  \|\  \ |\  \|\  \ |\  \    /  /|
+\ \  \|\  \ \  \|\  \ \  \___|\ \  \/  /|\ \  \/  /|\ \  \  /  / /
+ \ \   _  _\ \   __  \ \  \    \ \   ___  \ \   ___  \ \  \/  / / 
+  \ \  \\  \\ \  \ \  \ \  \____\ \  \\ \  \ \  \\ \  \ \    / /  
+   \ \__\\ _\\ \__\ \__\ \_______\ \__\\ \__\ \__\\ \__\ \__/ /   
+    \|__|\|__|\|__|\|__|\|_______|\|__| \|__|\|__| \|__|\|__|/    
+                                                                  
