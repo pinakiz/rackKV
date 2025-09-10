@@ -36,7 +36,6 @@ It supports both a simple HTTP API and a CLI interface, making it easy to experi
   - Remove obsolete/tombstoned entries
   - Generate fresh hint files
 
-
 ## 🔑 Interfaces
 🌐 HTTP API 
 - PUT
@@ -48,6 +47,18 @@ It supports both a simple HTTP API and a CLI interface, making it easy to experi
 - DELETE
  
    ```/delete?key```
+
+## 📊 Benchmarks
+We benchmarked using wrk with 8 threads and 1000 connections for 30s:
+```
+wrk -t8 -c1000 -d30s -s put.lua http://localhost:8080
+
+```
+### Results:
+- Requests/sec: 35,668
+- Latency (avg): 28.25 ms
+- Throughput: 4.01 MB/s
+- Total Requests: 107,285 in 30s
 
 💻 CLI
 ```rackkv open           # start server  
@@ -67,7 +78,3 @@ go run client/client.go
 ```
 ## 📚 Learnings
 RackKV is not just a project, but also a learning journey into database internals — from log-structured storage to compaction strategies, performance benchmarking and much more.
-
-
-
-
