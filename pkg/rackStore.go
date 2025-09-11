@@ -28,7 +28,7 @@ type RackHandle struct {
 	ActiveFile   *os.File
 	Mode         Mode
 	KeyDir       map[string]KeyDirEntry
-	mu           sync.Mutex
+	mu           sync.RWMutex
 	LastSync     time.Time
 	WriteCount   int
 }

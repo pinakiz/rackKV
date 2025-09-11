@@ -7,7 +7,10 @@ import (
 )
 
 func GET(handler *RackHandle, key string) (string, error) {
+	handler.mu.RLock();
 	keyEntry, ok := handler.KeyDir[key]
+	handler.mu.RUnlock();
+
 	if !ok {
 		return "", fmt.Errorf("key not found: %s", key)
 	}
