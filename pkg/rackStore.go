@@ -44,6 +44,7 @@ func Open(directory string, mode Mode, handler *RackHandle) error {
 		ReadWrite:   mode.ReadWrite,
 		SyncOnWrite: mode.SyncOnWrite,
 	}
+	fmt.Println(mode_handler);
 	handler.Mode = mode_handler
 
 	activeFileId, err := GetActiveFile("./data")
@@ -75,10 +76,10 @@ func Open(directory string, mode Mode, handler *RackHandle) error {
 			return fmt.Errorf("error while aquaring the lock: %w", err)
 		}
 	} else {
-		if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_SH|syscall.LOCK_NB); err != nil {
-			lockFile.Close()
-			return fmt.Errorf("error while aquaring the lock: %w", err)
-		}
+		// if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_SH|syscall.LOCK_NB); err != nil {
+		// 	lockFile.Close()
+		// 	return fmt.Errorf("error while aquaring the lock: %w", err)
+		// }
 	}
 
 	handler.Mode.IsUp = true

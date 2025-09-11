@@ -57,10 +57,10 @@ func main(){
 		readwrite , _ := strconv.ParseBool(rw);
 		syn := r.URL.Query().Get("syn")
 		sync, _ := strconv.ParseBool(syn);
-		if(handler.Mode.IsUp){
-			w.Write([]byte("Db is already opened"))
-			return
-		}
+		// if(handler.Mode.IsUp){
+		// 	w.Write([]byte("Db is already opened"))
+		// 	return
+		// }
 		if err := pkg.Open(".", pkg.Mode{ReadWrite : readwrite ,SyncOnWrite : sync}, handler);(err != nil){
 			w.Write([]byte(err.Error()))
 		}else{
